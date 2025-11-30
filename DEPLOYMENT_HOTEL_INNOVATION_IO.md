@@ -598,7 +598,7 @@ upstream hotel_backend {
 
 server {
     listen 80;
-    server_name hotel.nntc.io www.hotel.nntc.io;
+    server_name hotel.nntc.io www.hotel.nntc.io localhost;
 
     # Increase body size for file uploads
     client_max_body_size 20M;
@@ -632,13 +632,16 @@ server {
     }
 
     # Django admin (moved to /django-admin/ to avoid conflict with custom admin panel at /admin)
-    location /django-admin/ {
+    # Must be before location / to ensure it's matched first
+    location /django-admin {
         proxy_pass http://hotel_backend;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_redirect off;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
     }
 
     # Custom admin panel - explicitly route to frontend SPA (must be before location /)
@@ -1131,6 +1134,54 @@ If `/admin` returns "Not Found":
    ```
 
 **Note:** CSRF_TRUSTED_ORIGINS is now configured in `settings.py` and will automatically load from the `.env` file. Make sure to set it in your `.env` file for production.
+
+### Django Admin Returns 404
+
+If `/django-admin/` returns a 404 error:
+
+1. **Verify Nginx configuration includes `/django-admin` location block:**
+   ```bash
+   sudo nginx -T | grep -A 8 "location /django-admin"
+   ```
+   Should show a location block that proxies to `http://hotel_backend`.
+
+2. **Check location block order in Nginx config:**
+   - `/django-admin` should come **before** `location /` block
+   - More specific location blocks must come before general ones
+   - Order should be: `/api/`, `/django-admin`, `/admin`, `/health`, then `/`
+
+3. **Test backend directly:**
+   ```bash
+   curl http://127.0.0.1:6000/django-admin/
+   ```
+   Should return Django admin HTML (not JSON). If this fails, the issue is with Django, not Nginx.
+
+4. **Verify Django URLs are correct:**
+   ```bash
+   sudo su - hotel
+   cd /opt/hotel/Back-end
+   source ../venv/bin/activate
+   export $(cat .env | xargs)
+   python manage.py show_urls | grep admin
+   ```
+   Should show `django-admin/` in the URL patterns.
+
+5. **Check if frontend is catching the route:**
+   - If you see "Oops! Page not found" with "Return to Home" button, the frontend SPA is catching the route
+   - This means the `/django-admin` location block isn't being matched
+   - Ensure the location block is placed **before** the `location /` block
+
+6. **Reload Nginx after configuration changes:**
+   ```bash
+   sudo nginx -t  # Test configuration
+   sudo systemctl reload nginx  # Reload if test passes
+   ```
+
+7. **Check Nginx error logs:**
+   ```bash
+   sudo tail -f /var/log/nginx/error.log
+   ```
+   Look for any errors related to `/django-admin`.
 
 ---
 

@@ -364,11 +364,14 @@ class AdminAccommodationSerializer(serializers.ModelSerializer):
     
     def get_main_image_url(self, obj):
         """Return full URL for main image"""
-        if obj.main_image:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.main_image.url)
-            return obj.main_image.url
+        try:
+            if obj.main_image and hasattr(obj.main_image, 'url'):
+                request = self.context.get('request')
+                if request:
+                    return request.build_absolute_uri(obj.main_image.url)
+                return obj.main_image.url
+        except (ValueError, AttributeError):
+            pass
         return None
     
     def create(self, validated_data):

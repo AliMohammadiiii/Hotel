@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
+from django.conf import settings
 from datetime import date, timedelta
 from .models import Accommodation, AccommodationImage, Amenity, RoomAvailability
 from .serializers import (
@@ -32,6 +33,7 @@ class AdminAccommodationViewSet(viewsets.ModelViewSet):
                 Q(description__icontains=search)
             )
         return queryset.order_by('-created_at')
+    
     
     @action(detail=True, methods=['post'], url_path='images')
     def add_image(self, request, pk=None):
