@@ -162,6 +162,10 @@ CSRF_TRUSTED_ORIGINS = config(
     cast=Csv()
 )
 
+# Trust reverse proxy headers (needed when behind Nginx/CDN)
+USE_X_FORWARDED_HOST = config('USE_X_FORWARDED_HOST', default=True, cast=bool)
+USE_X_FORWARDED_PORT = config('USE_X_FORWARDED_PORT', default=True, cast=bool)
+
 # Allow media files to be accessed from frontend
 CORS_URLS_REGEX = r'^/(api|media)/.*$'
 
