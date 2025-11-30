@@ -374,6 +374,7 @@ class AdminAccommodationSerializer(serializers.ModelSerializer):
             pass
         return None
     
+    
     def create(self, validated_data):
         """Handle amenities creation"""
         amenities = validated_data.pop('amenities', None)

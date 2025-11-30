@@ -2,9 +2,13 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
 from django.conf import settings
+import logging
+import traceback
 from datetime import date, timedelta
 from .models import Accommodation, AccommodationImage, Amenity, RoomAvailability
 from .serializers import (
@@ -14,12 +18,15 @@ from .serializers import (
     AdminAccommodationImageSerializer
 )
 
+logger = logging.getLogger(__name__)
+
 
 class AdminAccommodationViewSet(viewsets.ModelViewSet):
     """Admin viewset for Accommodation CRUD operations"""
     queryset = Accommodation.objects.all()
     serializer_class = AdminAccommodationSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
     
     def get_queryset(self):
         """Filter accommodations by search query if provided"""
@@ -67,6 +74,34 @@ class AdminAccommodationViewSet(viewsets.ModelViewSet):
         )
         image.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+    def create(self, request, *args, **kwargs):
+        """Override create to add error handling"""
+        try:
+            logger.info(f"Creating accommodation. Data keys: {list(request.data.keys())}")
+            logger.info(f"Files: {list(request.FILES.keys())}")
+            logger.info(f"main_image in FILES: {'main_image' in request.FILES}")
+            
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        except ValidationError as e:
+            # Validation errors are expected and should return 400
+            logger.warning(f"Validation error creating accommodation: {e.detail}")
+            raise  # Re-raise to let DRF handle it properly
+        except Exception as e:
+            # Unexpected errors - log and return 500
+            logger.error(f"Unexpected error creating accommodation: {str(e)}")
+            logger.error(traceback.format_exc())
+            error_response = {
+                'error': str(e),
+                'detail': 'An error occurred while creating the accommodation'
+            }
+            if settings.DEBUG:
+                error_response['traceback'] = traceback.format_exc()
+            return Response(error_response, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class AdminAmenityViewSet(viewsets.ModelViewSet):
