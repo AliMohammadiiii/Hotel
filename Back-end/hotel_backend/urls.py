@@ -59,7 +59,7 @@ def health_check(request):
 
 urlpatterns = [
     re_path(r'^health/?$', health_check, name='health'),  # Matches /health and /health/
-    path('admin/', admin.site.urls),
+    path('django-admin/', admin.site.urls),  # Changed from /admin/ to /django-admin/ to avoid conflict with custom admin panel
     path('api/auth/', include('accounts.urls')),
     path('api/auth/', include('sso_integration.urls')),
     path('api/accommodations/', include('accommodations.urls')),

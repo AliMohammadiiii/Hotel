@@ -1,6 +1,6 @@
-# Hotel Application Deployment Guide for hotel.innovation.io
+# Hotel Application Deployment Guide for hotel.nntc.io
 
-Complete step-by-step guide to deploy the Hotel application at `hotel.innovation.io`.
+Complete step-by-step guide to deploy the Hotel application at `hotel.nntc.io`.
 
 ---
 
@@ -9,7 +9,7 @@ Complete step-by-step guide to deploy the Hotel application at `hotel.innovation
 Before starting, ensure you have:
 - [ ] Ubuntu 20.04 LTS or later server
 - [ ] Root or sudo access to the server
-- [ ] Domain name `hotel.innovation.io` pointing to your server IP
+- [ ] Domain name `hotel.nntc.io` pointing to your server IP
 - [ ] SSH access to the server
 - [ ] Basic knowledge of Linux commands
 
@@ -272,16 +272,16 @@ SECRET_KEY=your-generated-secret-key-here
 DEBUG=False
 
 # Your domain (include 127.0.0.1 and localhost for internal requests)
-ALLOWED_HOSTS=hotel.innovation.io,www.hotel.innovation.io,127.0.0.1,localhost
+ALLOWED_HOSTS=hotel.nntc.io,www.hotel.nntc.io,127.0.0.1,localhost
 
 # Database connection (use PostgreSQL in production)
 DATABASE_URL=postgresql://hotel:your-database-password@localhost:5432/hotel
 
 # CORS origins
-CORS_ALLOWED_ORIGINS=https://hotel.innovation.io,http://hotel.innovation.io
+CORS_ALLOWED_ORIGINS=https://hotel.nntc.io,http://hotel.nntc.io
 
 # CSRF trusted origins (must include protocol)
-CSRF_TRUSTED_ORIGINS=https://hotel.innovation.io,http://hotel.innovation.io,https://www.hotel.innovation.io,http://www.hotel.innovation.io
+CSRF_TRUSTED_ORIGINS=https://hotel.nntc.io,http://hotel.nntc.io,https://www.hotel.nntc.io,http://www.hotel.nntc.io
 
 # Static and Media Files
 STATIC_ROOT=/opt/hotel/Back-end/staticfiles
@@ -468,7 +468,7 @@ Group=hotel
 WorkingDirectory=/opt/hotel/Back-end
 Environment="PATH=/opt/hotel/venv/bin"
 EnvironmentFile=/opt/hotel/Back-end/.env
-Environment="DJANGO_ALLOWED_HOSTS=hotel.innovation.io,www.hotel.innovation.io,127.0.0.1,localhost"
+Environment="DJANGO_ALLOWED_HOSTS=hotel.nntc.io,www.hotel.nntc.io,127.0.0.1,localhost"
 ExecStart=/opt/hotel/venv/bin/gunicorn \
     --workers 3 \
     --timeout 120 \
@@ -558,7 +558,7 @@ This may take several minutes.
 
 ```bash
 cat > .env.production << EOF
-VITE_API_BASE_URL=https://hotel.innovation.io
+VITE_API_BASE_URL=https://hotel.nntc.io
 EOF
 ```
 
@@ -598,7 +598,7 @@ upstream hotel_backend {
 
 server {
     listen 80;
-    server_name hotel.innovation.io www.hotel.innovation.io;
+    server_name hotel.nntc.io www.hotel.nntc.io;
 
     # Increase body size for file uploads
     client_max_body_size 20M;
@@ -631,8 +631,8 @@ server {
         proxy_read_timeout 60s;
     }
 
-    # Django admin
-    location /admin/ {
+    # Django admin (moved to /django-admin/ to avoid conflict with custom admin panel at /admin)
+    location /django-admin/ {
         proxy_pass http://hotel_backend;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -641,11 +641,15 @@ server {
         proxy_redirect off;
     }
 
-    # Health check endpoint (optional)
+    # Health check endpoint (must be before location /)
     location /health {
         proxy_pass http://hotel_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_redirect off;
         access_log off;
-        add_header Content-Type text/plain;
     }
 
     # Frontend SPA - serve static files and handle routing
@@ -758,15 +762,15 @@ sudo chmod -R 755 /opt/hotel/Back-end/media
 ```bash
 curl http://localhost:6000/health
 # or
-curl http://hotel.innovation.io/health
+curl http://hotel.nntc.io/health
 ```
-
+ALLOWED_HOSTS=localhost,127.0.0.1,hotel.nntc.io,www.hotel.nntc.io
 Should return a response.
 
 ### 19.2 Test via Domain (HTTP)
 
 ```bash
-curl http://hotel.innovation.io/health
+curl http://hotel.nntc.io/health
 ```
 
 Should return a response.
@@ -775,19 +779,21 @@ Should return a response.
 
 Open your browser and navigate to:
 ```
-http://hotel.innovation.io
+http://hotel.nntc.io
 ```
 
 You should see the Hotel application.
 
-### 19.4 Test Admin Panel
+### 19.4 Test Django Admin Panel
 
 Navigate to:
 ```
-http://hotel.innovation.io/admin
+http://hotel.nntc.io/django-admin
 ```
 
 Log in with the superuser credentials you created in Step 11.4.
+
+**Note:** The custom admin panel (developed admin interface) is available at `/admin`, while Django's built-in admin is at `/django-admin`.
 
 ---
 
@@ -802,7 +808,7 @@ sudo apt install -y certbot python3-certbot-nginx
 ### 20.2 Obtain SSL Certificate
 
 ```bash
-sudo certbot --nginx -d hotel.innovation.io -d www.hotel.innovation.io
+sudo certbot --nginx -d hotel.nntc.io -d www.hotel.nntc.io
 ```
 
 Follow the prompts:
@@ -823,8 +829,8 @@ nano .env
 Update:
 ```bash
 SECURE_SSL_REDIRECT=True
-CORS_ALLOWED_ORIGINS=https://hotel.innovation.io
-CSRF_TRUSTED_ORIGINS=https://hotel.innovation.io,https://www.hotel.innovation.io
+CORS_ALLOWED_ORIGINS=https://hotel.nntc.io
+CSRF_TRUSTED_ORIGINS=https://hotel.nntc.io,https://www.hotel.nntc.io
 ```
 
 Restart the backend:
@@ -842,7 +848,7 @@ sudo certbot renew --dry-run
 ### 20.5 Test HTTPS
 
 ```bash
-curl https://hotel.innovation.io/health
+curl https://hotel.nntc.io/health
 ```
 
 ---
@@ -920,15 +926,15 @@ Press `Ctrl+C` to exit.
 
 ```bash
 # Health check
-curl http://hotel.innovation.io/health
+curl http://hotel.nntc.io/health
 
 # API endpoint (will require authentication in production)
-curl http://hotel.innovation.io/api/accommodations/
+curl http://hotel.nntc.io/api/accommodations/
 ```
 
 ### 22.4 Verify Frontend
 
-- Open `http://hotel.innovation.io` in your browser
+- Open `http://hotel.nntc.io` in your browser
 - Test login functionality
 - Navigate through the application
 - Check that all pages load correctly
@@ -1038,7 +1044,7 @@ curl http://hotel.innovation.io/api/accommodations/
 1. Check browser console for errors
 
 2. Verify frontend config:
-   - Check that `.env.production` has `VITE_API_BASE_URL=https://hotel.innovation.io`
+   - Check that `.env.production` has `VITE_API_BASE_URL=https://hotel.nntc.io`
    - Rebuild frontend after changing environment variables
 
 3. Check CORS settings:
@@ -1056,7 +1062,7 @@ curl http://hotel.innovation.io/api/accommodations/
 
    Add or update:
    ```bash
-   CSRF_TRUSTED_ORIGINS=https://hotel.innovation.io,http://hotel.innovation.io,https://www.hotel.innovation.io,http://www.hotel.innovation.io
+   CSRF_TRUSTED_ORIGINS=https://hotel.nntc.io,http://hotel.nntc.io,https://www.hotel.nntc.io,http://www.hotel.nntc.io
    ```
 
    **Important:** Must include protocol (`http://` or `https://`) and no trailing slash.
@@ -1081,6 +1087,8 @@ curl http://hotel.innovation.io/api/accommodations/
    from django.conf import settings
    print(settings.CSRF_TRUSTED_ORIGINS)
    ```
+
+**Note:** CSRF_TRUSTED_ORIGINS is now configured in `settings.py` and will automatically load from the `.env` file. Make sure to set it in your `.env` file for production.
 
 ---
 
@@ -1133,7 +1141,7 @@ pnpm build
 
 - [ ] SECRET_KEY is set and secure (not default)
 - [ ] DEBUG=False in production
-- [ ] ALLOWED_HOSTS includes only `hotel.innovation.io` and `www.hotel.innovation.io`
+- [ ] ALLOWED_HOSTS includes only `hotel.nntc.io` and `www.hotel.nntc.io`
 - [ ] CORS_ALLOWED_ORIGINS is restricted to your domain
 - [ ] CSRF_TRUSTED_ORIGINS is set correctly
 - [ ] Database password is strong
@@ -1152,11 +1160,12 @@ pnpm build
 After completing all steps:
 
 ✅ **Hotel application is deployed at:**
-- Frontend: `http://hotel.innovation.io/` (or `https://hotel.innovation.io/` with SSL)
-- API: `http://hotel.innovation.io/api`
-- Admin: `http://hotel.innovation.io/admin`
-- Static files: `http://hotel.innovation.io/static/`
-- Media files: `http://hotel.innovation.io/media/`
+- Frontend: `http://hotel.nntc.io/` (or `https://hotel.nntc.io/` with SSL)
+- API: `http://hotel.nntc.io/api`
+- Custom Admin Panel: `http://hotel.nntc.io/admin` (developed admin interface)
+- Django Admin: `http://hotel.nntc.io/django-admin` (Django built-in admin)
+- Static files: `http://hotel.nntc.io/static/`
+- Media files: `http://hotel.nntc.io/media/`
 
 ✅ **Services running:**
 - Django backend on port 6000 (via Gunicorn)
@@ -1236,5 +1245,5 @@ tail -f /var/log/hotel/gunicorn-error.log
 
 **Deployment Complete!** 🎉
 
-Your Hotel application should now be accessible at `http://hotel.innovation.io` (or `https://hotel.innovation.io` with SSL)
+Your Hotel application should now be accessible at `http://hotel.nntc.io` (or `https://hotel.nntc.io` with SSL)
 

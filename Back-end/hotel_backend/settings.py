@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-
+import dj_database_url
 from pathlib import Path
 from decouple import config, Csv
 
@@ -86,10 +86,9 @@ WSGI_APPLICATION = 'hotel_backend.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=config('DATABASE_URL', default='sqlite:///' + str(BASE_DIR / 'db.sqlite3'))
+    )
 }
 
 
@@ -147,6 +146,13 @@ CORS_ALLOWED_ORIGINS = config(
 )
 
 CORS_ALLOW_CREDENTIALS = config('CORS_ALLOW_CREDENTIALS', default=True, cast=bool)
+
+# CSRF settings - must include protocol (http:// or https://) and no trailing slash
+CSRF_TRUSTED_ORIGINS = config(
+    'CSRF_TRUSTED_ORIGINS',
+    default='http://localhost:3000,http://127.0.0.1:3000,http://localhost:6001,http://127.0.0.1:6001',
+    cast=Csv()
+)
 
 # Allow media files to be accessed from frontend
 CORS_URLS_REGEX = r'^/(api|media)/.*$'
