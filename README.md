@@ -93,7 +93,7 @@ python manage.py collectstatic --noinput
 python manage.py runserver
 ```
 
-The API will be available at `http://localhost:8000`
+The API will be available at `http://localhost:6000`
 
 ## Frontend Setup
 
@@ -120,7 +120,7 @@ VITE_API_BASE_URL=https://hotel.nntc.io/api
 
 For local development:
 ```env
-VITE_API_BASE_URL=http://localhost:8000
+VITE_API_BASE_URL=http://localhost:6000
 ```
 
 ### 3. Run Development Server
@@ -129,7 +129,7 @@ VITE_API_BASE_URL=http://localhost:8000
 pnpm dev
 ```
 
-The application will be available at `http://localhost:8080`
+The application will be available at `http://localhost:6001`
 
 ### 4. Build for Production
 
@@ -155,7 +155,7 @@ The production build will be in `dist/spa/`
    ```
 5. **Run with Gunicorn:**
    ```bash
-   gunicorn hotel_backend.wsgi:application --bind 0.0.0.0:8000 --workers 4
+   gunicorn hotel_backend.wsgi:application --bind 0.0.0.0:6000 --workers 4
    ```
 6. **Configure reverse proxy** (nginx/Apache) to serve the application
 7. **Set up SSL certificates** for HTTPS

@@ -6,7 +6,7 @@ import type {
   Amenity,
 } from "@shared/api";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:6000';
 
 // Admin Accommodation APIs
 export async function getAdminAccommodations(search?: string): Promise<Accommodation[]> {

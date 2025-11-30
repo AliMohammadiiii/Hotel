@@ -5,7 +5,7 @@ import { getAccessToken, refreshToken, clearAuth } from './auth';
  * API Base URL
  * Can be overridden with environment variable VITE_API_BASE_URL
  */
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:6000';
 
 /**
  * Fetch wrapper that automatically adds JWT token and handles 401 errors
