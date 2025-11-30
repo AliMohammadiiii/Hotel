@@ -303,4 +303,3 @@ For issues and questions, please open an issue on GitHub.
 
 Production: https://hotel.nntc.io
 API: https://hotel.nntc.io/api
-
