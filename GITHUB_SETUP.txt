@@ -1,0 +1,4 @@
+# To add GitHub remote after creating the repository:
+# git remote add origin https://github.com/YOUR_USERNAME/Hotel.git
+# git branch -M main
+# git push -u origin main
