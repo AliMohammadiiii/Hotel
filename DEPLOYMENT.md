@@ -2,40 +2,31 @@
 
 ## GitHub Repository Setup
 
-### 1. Create GitHub Repository
+The repository is already set up and available at:
+**https://github.com/AliMohammadiiii/Hotel.git**
 
-1. Go to [GitHub](https://github.com) and sign in
-2. Click the "+" icon in the top right corner
-3. Select "New repository"
-4. Name it "Hotel" (or your preferred name)
-5. **Do NOT** initialize with README, .gitignore, or license (we already have these)
-6. Click "Create repository"
+### Verify Remote Configuration
 
-### 2. Add Remote and Push
-
-After creating the repository on GitHub, run these commands:
-
-```bash
-cd /Users/ali/Documents/App/Hotel
-
-# Add the remote (replace YOUR_USERNAME with your GitHub username)
-git remote add origin https://github.com/YOUR_USERNAME/Hotel.git
-
-# Or if using SSH:
-# git remote add origin git@github.com:YOUR_USERNAME/Hotel.git
-
-# Push to GitHub
-git branch -M main
-git push -u origin main
-```
-
-### 3. Verify
-
-Check that everything was pushed correctly:
+Check that the remote is configured correctly:
 
 ```bash
 git remote -v
-git log --oneline
+```
+
+You should see:
+```
+origin  https://github.com/AliMohammadiiii/Hotel.git (fetch)
+origin  https://github.com/AliMohammadiiii/Hotel.git (push)
+```
+
+### Push Updates
+
+To push your latest changes:
+
+```bash
+git add .
+git commit -m "Your commit message"
+git push origin main
 ```
 
 ## Production Deployment
@@ -45,7 +36,7 @@ git log --oneline
 1. **SSH into your server**
 2. **Clone the repository:**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/Hotel.git
+   git clone https://github.com/AliMohammadiiii/Hotel.git
    cd Hotel/Back-end
    ```
 
@@ -133,7 +124,7 @@ git log --oneline
    - Go to [Netlify](https://netlify.com)
    - Click "Add new site" > "Import an existing project"
    - Connect to your GitHub repository
-   - Select the repository
+   - Select the repository: **AliMohammadiiii/Hotel**
 
 2. **Configure build settings:**
    - Base directory: `Front-end`
@@ -152,7 +143,7 @@ git log --oneline
 1. **Connect repository to Vercel:**
    - Go to [Vercel](https://vercel.com)
    - Click "Add New Project"
-   - Import your GitHub repository
+   - Import your GitHub repository: **AliMohammadiiii/Hotel**
 
 2. **Configure project:**
    - Root directory: `Front-end`
