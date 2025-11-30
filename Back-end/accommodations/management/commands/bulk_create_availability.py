@@ -178,3 +178,4 @@ class Command(BaseCommand):
         self.stdout.write(f'  Date range: {start_date} to {end_date}')
         self.stdout.write('=' * 60)
 
+

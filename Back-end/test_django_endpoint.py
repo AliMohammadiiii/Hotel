@@ -98,3 +98,4 @@ if __name__ == '__main__':
             # Test Django endpoint
             test_django_endpoint()
 
+

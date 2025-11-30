@@ -174,3 +174,4 @@ class AdminRoomAvailabilityViewSet(viewsets.ModelViewSet):
             'count': created_count
         }, status=status.HTTP_201_CREATED)
 
+

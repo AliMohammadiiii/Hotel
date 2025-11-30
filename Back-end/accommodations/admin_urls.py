@@ -13,3 +13,4 @@ router.register(r'room-availability', AdminRoomAvailabilityViewSet, basename='ad
 
 urlpatterns = router.urls
 
+

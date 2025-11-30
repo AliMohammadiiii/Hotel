@@ -95,3 +95,4 @@ if __name__ == '__main__':
     else:
         print("\n✗ Name retrieval failed - check API endpoint and token format")
 
+

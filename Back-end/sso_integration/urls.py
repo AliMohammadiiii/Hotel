@@ -11,3 +11,4 @@ urlpatterns = [
     path('injast/user-info/', injast_user_info_view, name='injast_user_info'),
 ]
 
+

@@ -7,3 +7,4 @@ router.register(r'reservations', AdminReservationViewSet, basename='admin-reserv
 
 urlpatterns = router.urls
 
+

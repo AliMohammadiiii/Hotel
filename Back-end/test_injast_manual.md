@@ -87,3 +87,4 @@ Your token contains:
 - Audience is **"injast"** (not "sso")
 - Token uses **"uid"** field instead of "nid" for user identification
 
+

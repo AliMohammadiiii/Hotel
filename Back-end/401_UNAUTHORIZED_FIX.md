@@ -80,3 +80,4 @@ Both issues need to be resolved:
 - ✅ 401 on session code exchange → IP whitelisting
 - ✅ 500 on user-basic API → API format/endpoint issue
 
+

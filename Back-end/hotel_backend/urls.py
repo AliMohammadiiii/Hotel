@@ -19,7 +19,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.static import serve
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 
 def serve_media_with_cors(request, path):
     """Serve media files with CORS headers"""
@@ -53,7 +53,12 @@ def serve_media_with_cors(request, path):
     
     return response
 
+def health_check(request):
+    """Health check endpoint for monitoring and load balancers"""
+    return JsonResponse({'status': 'healthy', 'service': 'hotel_backend'})
+
 urlpatterns = [
+    path('health', health_check, name='health'),
     path('admin/', admin.site.urls),
     path('api/auth/', include('accounts.urls')),
     path('api/auth/', include('sso_integration.urls')),

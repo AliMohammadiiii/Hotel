@@ -77,3 +77,4 @@ This error means the session code validation failed on Injast's side.
 - Session codes expire after 15 minutes
 - Backend IP must be whitelisted for the exchange to work
 
+
