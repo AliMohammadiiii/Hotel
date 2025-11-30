@@ -91,6 +91,41 @@ class AdminAccommodationViewSet(viewsets.ModelViewSet):
             # Validation errors are expected and should return 400
             logger.warning(f"Validation error creating accommodation: {e.detail}")
             raise  # Re-raise to let DRF handle it properly
+        except PermissionError as e:
+            # Permission errors - provide helpful message
+            logger.error(f"Permission error creating accommodation: {str(e)}")
+            error_response = {
+                'error': 'Permission denied while saving file',
+                'detail': 'The server does not have write permissions to the media directory. Please contact your system administrator.',
+                'hint': 'Run: sudo bash /opt/hotel/Back-end/fix_media_permissions.sh'
+            }
+            if settings.DEBUG:
+                error_response['traceback'] = traceback.format_exc()
+            return Response(error_response, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except OSError as e:
+            # File system errors (including permission errors)
+            if e.errno == 13:  # Permission denied
+                logger.error(f"Permission error (OSError) creating accommodation: {str(e)}")
+                error_response = {
+                    'error': 'Permission denied while saving file',
+                    'detail': 'The server does not have write permissions to the media directory. Please contact your system administrator.',
+                    'hint': 'Run: sudo bash /opt/hotel/Back-end/fix_media_permissions.sh',
+                    'path': str(e) if hasattr(e, 'filename') else None
+                }
+                if settings.DEBUG:
+                    error_response['traceback'] = traceback.format_exc()
+                return Response(error_response, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            else:
+                # Other OS errors
+                logger.error(f"OS error creating accommodation: {str(e)}")
+                logger.error(traceback.format_exc())
+                error_response = {
+                    'error': str(e),
+                    'detail': 'A file system error occurred while creating the accommodation'
+                }
+                if settings.DEBUG:
+                    error_response['traceback'] = traceback.format_exc()
+                return Response(error_response, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as e:
             # Unexpected errors - log and return 500
             logger.error(f"Unexpected error creating accommodation: {str(e)}")

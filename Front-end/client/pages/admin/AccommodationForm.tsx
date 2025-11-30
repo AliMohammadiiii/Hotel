@@ -21,9 +21,11 @@ import {
   createAccommodation,
   updateAccommodation,
   getAdminAmenities,
+  addAccommodationImage,
 } from "@/lib/admin/api";
 import { ImageUpload } from "@/components/admin/ImageUpload";
-import { useState } from "react";
+import { ImageSliderUploader } from "@/components/admin/ImageSliderUploader";
+import { useState, useMemo } from "react";
 
 const accommodationSchema = z.object({
   title: z.string().min(1, "عنوان الزامی است"),
@@ -47,6 +49,8 @@ export default function AccommodationForm() {
   const queryClient = useQueryClient();
   const isEdit = !!id;
   const [mainImage, setMainImage] = useState<File | null>(null);
+  const [additionalImages, setAdditionalImages] = useState<File[]>([]);
+  const [uploadingImages, setUploadingImages] = useState<Set<number>>(new Set());
 
   const { data: accommodation, isLoading: isLoadingAccommodation } = useQuery({
     queryKey: ["admin-accommodation", id],
@@ -88,11 +92,60 @@ export default function AccommodationForm() {
 
   const selectedAmenities = watch("amenities") || [];
 
+  // Prepare images for ImageSliderUploader
+  const imageItems = useMemo(() => {
+    // Show existing images when editing
+    const existingImages = isEdit && accommodation?.images
+      ? accommodation.images.map((img: any) => ({
+          id: img.id,
+          url: img.image_url || img,
+          isUploading: false,
+        }))
+      : [];
+    
+    // Add new images being uploaded
+    const newImages = additionalImages.map((file, index) => {
+      // Use file name + size as unique identifier
+      const fileId = `${file.name}-${file.size}-${file.lastModified}`;
+      return {
+        url: URL.createObjectURL(file),
+        file,
+        isNew: true,
+        isUploading: uploadingImages.has(fileId),
+        fileId,
+      };
+    });
+    
+    return [...existingImages, ...newImages];
+  }, [isEdit, accommodation, additionalImages, uploadingImages]);
+
   const createMutation = useMutation({
     mutationFn: (data: FormData) => createAccommodation(data),
-    onSuccess: () => {
+    onSuccess: async (createdAccommodation) => {
+      // Upload additional images after accommodation is created
+      if (additionalImages.length > 0 && createdAccommodation.id) {
+        try {
+          const uploadPromises = additionalImages.map((file) => {
+            const fileId = `${file.name}-${file.size}-${file.lastModified}`;
+            setUploadingImages((prev) => new Set(prev).add(fileId));
+            return addAccommodationImage(createdAccommodation.id, file)
+              .finally(() => {
+                setUploadingImages((prev) => {
+                  const newSet = new Set(prev);
+                  newSet.delete(fileId);
+                  return newSet;
+                });
+              });
+          });
+          await Promise.all(uploadPromises);
+          toast.success("اقامتگاه و تصاویر با موفقیت ایجاد شدند");
+        } catch (error) {
+          toast.error("اقامتگاه ایجاد شد اما خطا در آپلود برخی تصاویر");
+        }
+      } else {
+        toast.success("اقامتگاه با موفقیت ایجاد شد");
+      }
       queryClient.invalidateQueries({ queryKey: ["admin-accommodations"] });
-      toast.success("اقامتگاه با موفقیت ایجاد شد");
       navigate("/admin/accommodations");
     },
     onError: (error: Error) => {
@@ -102,10 +155,32 @@ export default function AccommodationForm() {
 
   const updateMutation = useMutation({
     mutationFn: (data: FormData) => updateAccommodation(Number(id!), data),
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Upload additional images after accommodation is updated
+      if (additionalImages.length > 0 && id) {
+        try {
+          const uploadPromises = additionalImages.map((file) => {
+            const fileId = `${file.name}-${file.size}-${file.lastModified}`;
+            setUploadingImages((prev) => new Set(prev).add(fileId));
+            return addAccommodationImage(Number(id), file)
+              .finally(() => {
+                setUploadingImages((prev) => {
+                  const newSet = new Set(prev);
+                  newSet.delete(fileId);
+                  return newSet;
+                });
+              });
+          });
+          await Promise.all(uploadPromises);
+          toast.success("اقامتگاه و تصاویر با موفقیت بروزرسانی شدند");
+        } catch (error) {
+          toast.error("اقامتگاه بروزرسانی شد اما خطا در آپلود برخی تصاویر");
+        }
+      } else {
+        toast.success("اقامتگاه با موفقیت بروزرسانی شد");
+      }
       queryClient.invalidateQueries({ queryKey: ["admin-accommodations"] });
       queryClient.invalidateQueries({ queryKey: ["admin-accommodation", id] });
-      toast.success("اقامتگاه با موفقیت بروزرسانی شد");
       navigate("/admin/accommodations");
     },
     onError: (error: Error) => {
@@ -271,6 +346,36 @@ export default function AccommodationForm() {
             value={isEdit && accommodation?.main_image ? accommodation.main_image : mainImage}
             onChange={setMainImage}
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label>تصاویر اضافی</Label>
+          <ImageSliderUploader
+            images={imageItems}
+            onImageAdd={(file) => {
+              setAdditionalImages((prev) => [...prev, file]);
+            }}
+            onImageDelete={(imageId) => {
+              // Only handle deletion of existing images (not new ones)
+              // New images can be removed by removing from additionalImages
+              // This will be handled in the detail page
+            }}
+            label=""
+            maxImages={20}
+            isUploading={uploadingImages.size > 0}
+          />
+          {additionalImages.length > 0 && (
+            <div className="mt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setAdditionalImages([])}
+              >
+                پاک کردن همه تصاویر جدید
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="space-y-2">

@@ -5,21 +5,23 @@ from datetime import date, timedelta
 from .models import Accommodation, AccommodationImage, Amenity, RoomAvailability
 
 
-class AccommodationImageInline(admin.TabularInline):
+class AccommodationImageInline(admin.StackedInline):
     """Inline admin for accommodation images"""
     model = AccommodationImage
-    extra = 1
+    extra = 3
     fields = ('image', 'image_preview',)
     readonly_fields = ('image_preview',)
+    verbose_name = "تصویر اضافی"
+    verbose_name_plural = "تصاویر اضافی"
     
     def image_preview(self, obj):
-        if obj.image:
+        if obj and obj.pk and obj.image:
             return format_html(
-                '<img src="{}" width="100" height="100" style="object-fit: cover;" />',
+                '<img src="{}" width="300" height="200" style="object-fit: cover; border-radius: 8px; margin-top: 10px;" />',
                 obj.image.url
             )
-        return "No image"
-    image_preview.short_description = "پیش‌نمایش"
+        return format_html('<p style="color: #999; margin-top: 10px;">پس از آپلود تصویر، پیش‌نمایش نمایش داده می‌شود</p>')
+    image_preview.short_description = "پیش‌نمایش تصویر"
 
 
 class RoomAvailabilityInline(admin.TabularInline):
@@ -67,6 +69,34 @@ class AccommodationAdmin(admin.ModelAdmin):
             )
         return "No image"
     main_image_preview.short_description = "پیش‌نمایش تصویر اصلی"
+
+
+@admin.register(AccommodationImage)
+class AccommodationImageAdmin(admin.ModelAdmin):
+    """Admin configuration for AccommodationImage model"""
+    list_display = ('accommodation', 'image_preview', 'created_at')
+    list_filter = ('accommodation', 'created_at')
+    search_fields = ('accommodation__title', 'accommodation__city', 'accommodation__province')
+    readonly_fields = ('image_preview', 'created_at')
+    ordering = ['-created_at']
+    
+    fieldsets = (
+        ('اطلاعات', {
+            'fields': ('accommodation', 'image', 'image_preview')
+        }),
+        ('تاریخ', {
+            'fields': ('created_at',)
+        }),
+    )
+    
+    def image_preview(self, obj):
+        if obj.image:
+            return format_html(
+                '<img src="{}" width="300" height="200" style="object-fit: cover; border-radius: 8px;" />',
+                obj.image.url
+            )
+        return "No image"
+    image_preview.short_description = "پیش‌نمایش تصویر"
 
 
 @admin.register(Amenity)

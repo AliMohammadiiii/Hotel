@@ -133,6 +133,14 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Ensure media directory and subdirectories exist
+import os
+MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
+# Create subdirectories for different media types
+(MEDIA_ROOT / 'accommodations').mkdir(parents=True, exist_ok=True)
+(MEDIA_ROOT / 'accommodations' / 'images').mkdir(parents=True, exist_ok=True)
+(MEDIA_ROOT / 'amenities' / 'icons').mkdir(parents=True, exist_ok=True)
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
