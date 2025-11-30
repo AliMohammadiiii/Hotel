@@ -641,6 +641,15 @@ server {
         proxy_redirect off;
     }
 
+    # Custom admin panel - explicitly route to frontend SPA (must be before location /)
+    location /admin {
+        root /opt/hotel/Front-end/dist/spa;
+        try_files $uri $uri/ /index.html;
+        expires 1h;
+        add_header Cache-Control "public, must-revalidate";
+        index index.html;
+    }
+
     # Health check endpoint (must be before location /)
     location /health {
         proxy_pass http://hotel_backend;
@@ -1038,6 +1047,39 @@ curl http://hotel.nntc.io/api/accommodations/
    ```
 
 4. Check that `VITE_API_BASE_URL` is set correctly in build
+
+### Admin Panel (/) Not Found
+
+If `/admin` returns "Not Found":
+
+1. **Verify Nginx configuration includes explicit `/admin` location block:**
+   ```bash
+   sudo nginx -T | grep -A 5 "location /admin"
+   ```
+   Should show a location block that routes to the frontend SPA.
+
+2. **Check that frontend is built and deployed:**
+   ```bash
+   ls -la /opt/hotel/Front-end/dist/spa/index.html
+   ```
+   The `index.html` file must exist.
+
+3. **Verify the location block order in Nginx config:**
+   - `/admin` location block should come before the general `location /` block
+   - `/django-admin/` should proxy to backend
+   - `/admin` should serve from frontend SPA
+
+4. **Test the frontend build:**
+   ```bash
+   curl http://localhost/admin
+   ```
+   Should return the HTML content of `index.html`.
+
+5. **Reload Nginx after configuration changes:**
+   ```bash
+   sudo nginx -t  # Test configuration
+   sudo systemctl reload nginx  # Reload if test passes
+   ```
 
 ### API Calls Fail
 

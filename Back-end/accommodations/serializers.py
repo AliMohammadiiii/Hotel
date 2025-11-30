@@ -371,6 +371,14 @@ class AdminAccommodationSerializer(serializers.ModelSerializer):
             return obj.main_image.url
         return None
     
+    def create(self, validated_data):
+        """Handle amenities creation"""
+        amenities = validated_data.pop('amenities', None)
+        instance = super().create(validated_data)
+        if amenities is not None:
+            instance.amenities.set(amenities)
+        return instance
+    
     def update(self, instance, validated_data):
         """Handle amenities update"""
         amenities = validated_data.pop('amenities', None)
