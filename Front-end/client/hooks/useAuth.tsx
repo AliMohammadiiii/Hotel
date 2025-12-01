@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { login as loginApi, logout as logoutApi, getCurrentUser, getUser, loginWithInjast as loginWithInjastApi, signup as signupApi, type User, type SignupRequest } from '@/lib/auth';
+import { clearAdminAuth } from '@/lib/adminAuth';
 
 interface AuthContextType {
   user: User | null;
@@ -56,7 +57,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
+    // Clear normal app auth
     logoutApi();
+    // Also clear any admin-panel token so خروج logs out from admin as well
+    clearAdminAuth();
     setUser(null);
   };
 

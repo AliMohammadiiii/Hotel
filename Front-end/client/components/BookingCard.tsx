@@ -67,7 +67,10 @@ export default function BookingCard({ reservation }: BookingCardProps) {
                 `اقامتگاه #${reservation.accommodation}`;
 
   const handleCardClick = () => {
-    setIsModalOpen(true);
+    // Prevent reopening immediately if modal is already open
+    if (!isModalOpen) {
+      setIsModalOpen(true);
+    }
   };
 
   return (

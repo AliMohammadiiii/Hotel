@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,6 +9,8 @@ import type { Reservation, Accommodation } from "@shared/api";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDateForDisplay, gregorianToPersian } from "@/lib/dateUtils";
 import jsPDF from "jspdf";
+// @ts-ignore - types are declared globally in vite-env.d.ts
+import html2canvas from "html2canvas";
 
 interface ReservationInvoiceModalProps {
   open: boolean;
@@ -20,11 +23,14 @@ export function ReservationInvoiceModal({
   onOpenChange,
   reservation,
 }: ReservationInvoiceModalProps) {
+  const invoiceRef = useRef<HTMLDivElement | null>(null);
+  const pdfRef = useRef<HTMLDivElement | null>(null);
   const { user } = useAuth();
 
-  // Get accommodation data
+  // Get accommodation data - prefer accommodation_detail which has full info including address
+  const accommodationDetail = reservation.accommodation_detail;
   const accommodation: Accommodation | undefined =
-    reservation.accommodation_detail ||
+    accommodationDetail ||
     (typeof reservation.accommodation === "object"
       ? reservation.accommodation
       : undefined);
@@ -49,277 +55,415 @@ export function ReservationInvoiceModal({
   const phoneNumber = reservation.contact_phone || "نامشخص";
 
   // Format number of guests
-  const guestsText = `${reservation.number_of_guests} نفر پایه`;
+  const guestsText = `${reservation.number_of_guests} نفر`;
+
+  // Nights (fallback to 1 if not provided)
+  const nights =
+    reservation.nights ??
+    Math.max(
+      1,
+      Math.round(
+        (new Date(reservation.check_out_date).getTime() -
+          new Date(reservation.check_in_date).getTime()) /
+          (1000 * 60 * 60 * 24)
+      )
+    );
+
+  // Persian dates
+  const checkInPersian = gregorianToPersian(reservation.check_in_date);
+  const checkOutPersian = gregorianToPersian(reservation.check_out_date);
+
+  // Calculate price breakdown from backend data
+  const totalPriceNum = parseInt(reservation.total_price || "0");
+  const accommodationPricePerNight = accommodation?.price_per_night
+    ? parseInt(accommodation.price_per_night)
+    : 0;
+
+  // Calculate platform fee: total - (nights * price_per_night)
+  const accommodationTotal = nights * accommodationPricePerNight;
+  const platformFee =
+    totalPriceNum > accommodationTotal
+      ? totalPriceNum - accommodationTotal
+      : 0;
+
+  // Use accommodation price per night from backend, or calculate average
+  const pricePerNight =
+    accommodationPricePerNight > 0
+      ? accommodationPricePerNight
+      : nights > 0
+        ? Math.round(totalPriceNum / nights)
+        : 0;
+
+  // Format prices with Persian numbers
+  const formatPrice = (price: number) =>
+    `${price.toLocaleString("fa-IR")} تومان`;
+
+  // Get location and address from backend
+  const location =
+    accommodation?.province && accommodation?.city
+      ? `${accommodation.province}، ${accommodation.city}`
+      : "";
+  
+  // Get address from accommodation_detail (which has the address field)
+  const address = accommodationDetail && "address" in accommodationDetail
+    ? (accommodationDetail as any).address
+    : null;
 
   // Generate PDF
-  const handleDownloadPDF = () => {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 20;
-    let yPos = margin;
+  const handleDownloadPDF = async () => {
+    if (!pdfRef.current) return;
 
-    // Set font for Persian text (using default font for now)
-    // Note: For proper Persian support, you may need to add a Persian font
-    doc.setFontSize(20);
-    doc.text("فاکتور", pageWidth - margin, yPos, { align: "right" });
-    yPos += 15;
+    const element = pdfRef.current;
 
-    // Add separator
-    doc.setLineWidth(0.5);
-    doc.line(margin, yPos, pageWidth - margin, yPos);
-    yPos += 10;
+    // Use html2canvas to capture the simplified PDF layout
+    const canvas = await html2canvas(element, {
+      scale: 2, // better quality
+      useCORS: true,
+      backgroundColor: "#F5F6F8",
+    });
 
-    // Accommodation section
-    doc.setFontSize(14);
-    doc.text("اقامتگاه", pageWidth - margin, yPos, { align: "right" });
-    yPos += 8;
-    doc.setFontSize(12);
-    doc.text(accommodationTitle, pageWidth - margin, yPos, { align: "right" });
-    yPos += 15;
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF("p", "mm", "a4");
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-    // Add separator
-    doc.line(margin, yPos, pageWidth - margin, yPos);
-    yPos += 10;
+    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
 
-    // Number of passengers
-    doc.setFontSize(14);
-    doc.text("تعداد مسافران", pageWidth - margin, yPos, { align: "right" });
-    yPos += 8;
-    doc.setFontSize(12);
-    doc.text(guestsText, pageWidth - margin, yPos, { align: "right" });
-    yPos += 15;
-
-    // Add separator
-    doc.line(margin, yPos, pageWidth - margin, yPos);
-    yPos += 10;
-
-    // Passenger information
-    doc.setFontSize(14);
-    doc.text("اطلاعات مسافر", pageWidth - margin, yPos, { align: "right" });
-    yPos += 8;
-    doc.setFontSize(12);
-    doc.text(
-      `${userName} - ${phoneNumber}`,
-      pageWidth - margin,
-      yPos,
-      { align: "right" }
-    );
-    yPos += 15;
-
-    // Add separator
-    doc.line(margin, yPos, pageWidth - margin, yPos);
-    yPos += 10;
-
-    // Total cost
-    doc.setFontSize(14);
-    doc.text("مجموع هزینه", pageWidth - margin, yPos, { align: "right" });
-    yPos += 8;
-    doc.setFontSize(12);
-    doc.text(formattedTotalPrice, pageWidth - margin, yPos, { align: "right" });
-
-    // Save PDF
-    doc.save(`فاکتور-${reservation.id}.pdf`);
+    // On mobile, opening the PDF in a new tab gives a much better UX
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+      const blobUrl = pdf.output("bloburl");
+      window.open(blobUrl, "_blank");
+    } else {
+      pdf.save(`فاکتور-${reservation.id}.pdf`);
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-white" dir="rtl">
-        <DialogHeader>
-          <DialogTitle className="text-right text-2xl font-bold text-text-primary mb-6">
-            فاکتور
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="flex flex-col gap-4">
-          {/* Accommodation Section */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-3">
-              <div className="flex-1 border-t border-stroke-tertiary"></div>
-              <div className="flex items-center gap-2">
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
-                    stroke="#4F545E"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M9 22V12H15V22"
-                    stroke="#4F545E"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <span className="text-sm font-medium text-text-secondary">
-                  اقامتگاه
-                </span>
-              </div>
+    <>
+      {/* Hidden PDF layout - matches the detailed invoice design */}
+      <div
+        ref={pdfRef}
+        className="fixed -left-[9999px] top-0 w-[900px] bg-[#F5F6F8] p-8"
+        dir="rtl"
+      >
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 rounded-3xl bg-white p-8 shadow-sm">
+          {/* Logo placeholder at top */}
+          <div className="mb-4 text-center">
+            <div className="inline-block rounded-lg bg-primary-500/10 px-6 py-2 text-xl font-bold text-primary-500">
+              اینجاست
             </div>
-            <p className="text-right text-base text-text-primary">
-              {accommodationTitle}
-            </p>
           </div>
 
-          {/* Number of Passengers Section */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-3">
-              <div className="flex-1 border-t border-stroke-tertiary"></div>
-              <div className="flex items-center gap-2">
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21"
-                    stroke="#4F545E"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z"
-                    stroke="#4F545E"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M23 21V19C22.9993 18.1137 22.7044 17.2528 22.1614 16.5523C21.6184 15.8519 20.8581 15.3516 20 15.13"
-                    stroke="#4F545E"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89318 18.7122 8.75608 18.1676 9.45769C17.623 10.1593 16.8604 10.6597 16 10.88"
-                    stroke="#4F545E"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <span className="text-sm font-medium text-text-secondary">
-                  تعداد مسافران
-                </span>
-              </div>
+          {/* Reservation code header */}
+          <div className="mb-4 flex items-center justify-between border-b border-bg-secondary pb-3">
+            <div className="text-sm text-right text-text-secondary">
+              کد رزرو آنلاین:{" "}
+              <span className="font-semibold text-text-primary">
+                {reservation.id}
+              </span>
             </div>
-            <p className="text-right text-base text-text-primary">
-              {guestsText}
-            </p>
           </div>
 
-          {/* Passenger Information Section */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-3">
-              <div className="flex-1 border-t border-stroke-tertiary"></div>
-              <div className="flex items-center gap-2">
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
-                    stroke="#4F545E"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M12 11C14.2091 11 16 9.20914 16 7C16 4.79086 14.2091 3 12 3C9.79086 3 8 4.79086 8 7C8 9.20914 9.79086 11 12 11Z"
-                    stroke="#4F545E"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <span className="text-sm font-medium text-text-secondary">
-                  اطلاعات مسافر
+          {/* Main content: Accommodation, Guest */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Right Column: Accommodation Details */}
+            <div className="flex flex-col gap-3 rounded-2xl border border-bg-secondary bg-bg-secondary/30 p-4">
+              <div className="mb-2 text-xs font-semibold text-text-secondary text-right">
+                نام اقامتگاه:
+              </div>
+              <div className="text-sm font-medium text-text-primary text-right">
+                {accommodationTitle}
+              </div>
+              {location && (
+                <div className="mt-2 text-xs font-medium text-text-primary text-right">
+                  {location}
+                </div>
+              )}
+              {address && (
+                <div className="mt-1 text-xs text-text-secondary text-right">
+                  {address}
+                </div>
+              )}
+              <div className="mt-3 space-y-2 border-t border-bg-secondary pt-3">
+                <div className="flex justify-between text-xs text-right">
+                  <span className="text-text-secondary text-right">تاریخ ورود:</span>
+                  <span className="font-medium text-text-primary text-right">
+                    {checkInPersian
+                      ? `${checkInPersian.year}/${checkInPersian.month}/${checkInPersian.day}`
+                      : formatDateForDisplay(reservation.check_in_date)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs text-right">
+                  <span className="text-text-secondary text-right">تاریخ خروج:</span>
+                  <span className="font-medium text-text-primary text-right">
+                    {checkOutPersian
+                      ? `${checkOutPersian.year}/${checkOutPersian.month}/${checkOutPersian.day}`
+                      : formatDateForDisplay(reservation.check_out_date)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs text-right">
+                  <span className="text-text-secondary text-right">شب اقامت:</span>
+                  <span className="font-medium text-text-primary text-right">{nights}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Middle Column: Host Information - Hidden if no data available */}
+            {/* Host information not available in current backend schema */}
+
+            {/* Left Column: Guest Information */}
+            <div className="flex flex-col gap-3 rounded-2xl border border-bg-secondary bg-bg-secondary/30 p-4">
+              <div className="mb-2 text-xs font-semibold text-text-secondary text-right">
+                مهمان:
+              </div>
+              <div className="rounded-lg bg-white px-3 py-2 text-sm font-medium text-text-primary text-right">
+                {userName}
+              </div>
+              <div className="rounded-lg bg-white px-3 py-2 text-xs text-text-secondary text-right">
+                +{phoneNumber}
+              </div>
+              <div className="mt-2 rounded-lg bg-white px-3 py-2 text-xs text-right">
+                <span className="text-text-secondary text-right">
+                  {reservation.number_of_guests} نفر مهمان
+                </span>
+                <span className="text-text-secondary text-right">
+                  {" "}
+                  (۰ نفر اضافه)
                 </span>
               </div>
             </div>
-            <p className="text-right text-base text-text-primary">
-              {userName} - {phoneNumber}
-            </p>
           </div>
 
-          {/* Total Cost Section */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-3">
-              <div className="flex-1 border-t border-stroke-tertiary"></div>
-              <div className="flex items-center gap-2">
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
+          {/* Payment Details */}
+          <div className="rounded-3xl bg-bg-secondary/60 p-6">
+            <div className="mb-4 text-right text-lg font-semibold text-text-primary">
+              جزئیات پرداخت
+            </div>
+            <div className="flex flex-col gap-3">
+              {/* Individual nights - using actual price from backend */}
+              {Array.from({ length: nights }).map((_, index) => (
+                <div
+                  key={index}
+                  className="flex flex-row-reverse items-center justify-between rounded-2xl bg-white px-4 py-3"
                 >
-                  <path
-                    d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z"
-                    stroke="#4F545E"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M14 2V8H20"
-                    stroke="#4F545E"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M16 13H8"
-                    stroke="#4F545E"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M16 17H8"
-                    stroke="#4F545E"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M10 9H9H8"
-                    stroke="#4F545E"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <span className="text-sm font-medium text-text-secondary">
-                  مجموع هزینه
+                  <span className="text-sm text-text-secondary text-right">
+                    ۱ شب × {formatPrice(pricePerNight)}
+                  </span>
+                  <span className="text-sm font-medium text-text-primary">
+                    {formatPrice(pricePerNight)}
+                  </span>
+                </div>
+              ))}
+              {/* Platform fee */}
+              {platformFee > 0 && (
+                <div className="flex flex-row-reverse items-center justify-between rounded-2xl bg-white px-4 py-3">
+                  <span className="text-sm text-text-secondary text-right">
+                    کارمزد خدمات پلتفرم
+                  </span>
+                  <span className="text-sm font-medium text-text-primary">
+                    {formatPrice(platformFee)}
+                  </span>
+                </div>
+              )}
+              {/* Final amount */}
+              <div className="flex flex-row-reverse items-center justify-between rounded-2xl bg-white px-4 py-3 border-2 border-primary-500/20">
+                <span className="text-sm font-semibold text-text-secondary text-right text-primary-500">
+                  مبلغ نهایی
+                </span>
+                <span className="text-base font-bold text-primary-500 text-right">
+                  {formattedTotalPrice}
                 </span>
               </div>
             </div>
-            <p className="text-right text-base text-text-primary">
-              {formattedTotalPrice}
+          </div>
+
+          {/* Refund Policy - using generic rules based on check-in date */}
+          {checkInPersian && (
+            <div className="rounded-3xl bg-bg-secondary/40 p-6">
+              <div className="mb-4 text-right text-base font-semibold text-text-primary">
+                قوانین استرداد
+              </div>
+              <div className="space-y-3 text-right text-xs leading-relaxed text-text-secondary">
+                <p className="text-right">
+                  بیش از ۱۰ روز مانده به تاریخ ورود ({checkInPersian.year}/{checkInPersian.month}/{checkInPersian.day})، وجه به صورت کامل به میهمان عودت می‌شود.
+                </p>
+                <p className="text-right">
+                  کمتر از ۱۰ روز مانده به تاریخ ورود تا روز ورود، ۱۰۰ درصد مبلغ شب اول و ۵۰ درصد مبلغ سایر شب‌ها کسر می‌شود.
+                </p>
+                <p className="text-right">
+                  از روز ورود به بعد، کل مبلغ رزرو کسر می‌شود.
+                </p>
+                <p className="mt-2 text-right">
+                  مسافران موظف‌اند در ساعت تحویل و تخلیه اعلام‌شده توسط اقامتگاه، اتاق را تحویل بگیرند و تحویل دهند.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Footer */}
+          <div className="mt-6 flex items-start justify-between border-t border-bg-secondary pt-6">
+            <div className="flex flex-col gap-2 text-xs text-text-secondary">
+              {/* Contact information - should come from backend settings/config */}
+              <div className="font-semibold">تماس با پشتیبانی</div>
+              {/* TODO: Fetch from backend API endpoint for site settings */}
+            </div>
+            <div className="text-right">
+              <div className="mb-2 inline-block rounded-lg bg-primary-500/10 px-4 py-2 text-sm font-bold text-primary-500">
+                اینجاست
+              </div>
+              <div className="mt-2 text-[10px] text-text-secondary">
+                سامانه رزرو اقامتگاه
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl bg-[#F5F6F8]" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="mb-4 text-right text-2xl font-bold text-text-primary">
+              فاکتور رزرو
+            </DialogTitle>
+          </DialogHeader>
+
+          <div
+            ref={invoiceRef}
+            className="mx-auto flex w-full max-w-3xl flex-col gap-6 rounded-3xl bg-white p-6 shadow-sm max-h-[90vh] overflow-y-auto"
+          >
+          {/* Top row: code + accommodation + dates */}
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            {/* Left side: accommodation & dates (mirrored) */}
+            <div className="flex flex-col gap-3 md:items-start">
+              <div className="flex flex-wrap items-center gap-2 md:justify-start">
+                <span className="text-xs text-text-secondary">کد رزرو آنلاین:</span>
+                <div className="rounded-full bg-bg-secondary px-3 py-1 text-sm font-medium text-text-primary">
+                  {reservation.id}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2 md:justify-start">
+                <div className="min-w-[140px] rounded-2xl bg-bg-secondary px-3 py-2 text-right text-xs">
+                  <div className="mb-1 text-[11px] text-text-secondary">
+                    نام اقامتگاه:
+                  </div>
+                  <div className="text-sm font-medium text-text-primary">
+                    {accommodationTitle}
+                  </div>
+                </div>
+
+                <div className="min-w-[140px] rounded-2xl bg-bg-secondary px-3 py-2 text-right text-xs">
+                  <div className="mb-1 text-[11px] text-text-secondary">
+                    تاریخ ورود:
+                  </div>
+                  <div className="text-sm font-medium text-text-primary">
+                    {checkInPersian
+                      ? `${checkInPersian.year}/${checkInPersian.month}/${checkInPersian.day}`
+                      : formatDateForDisplay(reservation.check_in_date)}
+                  </div>
+                </div>
+
+                <div className="min-w-[140px] rounded-2xl bg-bg-secondary px-3 py-2 text-right text-xs">
+                  <div className="mb-1 text-[11px] text-text-secondary">
+                    تاریخ خروج:
+                  </div>
+                  <div className="text-sm font-medium text-text-primary">
+                    {checkOutPersian
+                      ? `${checkOutPersian.year}/${checkOutPersian.month}/${checkOutPersian.day}`
+                      : formatDateForDisplay(reservation.check_out_date)}
+                  </div>
+                </div>
+
+                <div className="min-w-[120px] rounded-2xl bg-bg-secondary px-3 py-2 text-right text-xs">
+                  <div className="mb-1 text-[11px] text-text-secondary">
+                    شب‌ اقامت:
+                  </div>
+                  <div className="text-sm font-medium text-text-primary">
+                    {nights}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right side: guest info (mirrored) */}
+            <div className="flex flex-col gap-2 md:items-end">
+              <div className="text-right text-xs text-text-secondary">میهمان:</div>
+          <div className="flex flex-col gap-2">
+                <div className="inline-flex max-w-xs flex-wrap items-center justify-between gap-2 rounded-2xl bg-bg-secondary px-3 py-2 text-right text-xs">
+                  <span className="text-sm font-medium text-text-primary">
+                    {userName}
+                  </span>
+                  <span className="text-[11px] text-text-secondary">
+                    {phoneNumber}
+                  </span>
+                </div>
+                <div className="inline-flex max-w-xs flex-wrap items-center justify-between gap-2 rounded-2xl bg-bg-secondary px-3 py-2 text-right text-xs">
+                  <span className="text-[11px] text-text-secondary">
+                    تعداد میهمانان
+                  </span>
+                  <span className="text-sm font-medium text-text-primary">
+                    {guestsText}
+                </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Payment details block */}
+          <div className="rounded-3xl bg-bg-secondary/60 p-5">
+            <div className="mb-4 text-right text-base font-semibold text-text-primary">
+              جزئیات پرداخت
+            </div>
+            <div className="grid gap-3 text-sm md:grid-cols-2">
+              <div className="flex items-center justify-between rounded-2xl bg-white px-3 py-2">
+                <span className="text-text-secondary">
+                  {nights} شب اقامت
+                </span>
+                <span className="font-medium text-text-primary">
+                  {formattedTotalPrice}
+                </span>
+              </div>
+              <div className="flex items-center justify-between rounded-2xl bg-white px-3 py-2">
+                <span className="text-text-secondary">مبلغ نهایی</span>
+                <span className="font-bold text-primary-500">
+                  {formattedTotalPrice}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Rules section (static text similar to sample) */}
+          <div className="mt-2 rounded-3xl bg-bg-secondary/40 p-5 text-xs leading-relaxed text-text-secondary text-right">
+            <div className="mb-2 text-sm font-semibold text-text-primary text-right">
+              قوانین استرداد
+            </div>
+            <p className="mb-1 text-right">
+              بیش از ۱۰ روز مانده به تاریخ ورود، وجه به‌صورت کامل به میهمان عودت
+              می‌شود.
+            </p>
+            <p className="mb-1 text-right">
+              کمتر از ۱۰ روز مانده به تاریخ ورود تا روز ورود، ۱۰۰٪ مبلغ شب اول و
+              ۵۰٪ مبلغ سایر شب‌ها کسر می‌شود.
+            </p>
+            <p className="mb-3 text-right">
+              از روز ورود به بعد، کل مبلغ رزرو به‌عنوان جریمه کنسلی کسر می‌شود.
+            </p>
+            <p  className="mb-3 text-right">
+              مسافران موظف‌اند در ساعت تحویل و تخلیه اعلام‌شده توسط اقامتگاه،
+              اتاق را تحویل بگیرند و تحویل دهند.
             </p>
           </div>
 
           {/* Download PDF Button */}
-          <div className="mt-4 pt-4">
+          <div className="mt-4 flex flex-col items-stretch gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
+            {/* Close hint for mobile */}
+            <span className="text-center text-xs text-text-secondary sm:text-right">
+              برای بستن، روی دکمه ضربدر بالا یا بیرون از فاکتور بزنید.
+            </span>
             <button
               onClick={handleDownloadPDF}
-              className="flex items-center gap-2 text-primary-500 hover:text-primary-600 transition-colors"
+              className="flex items-center justify-center gap-2 rounded-xl bg-primary-500 px-4 py-2 text-sm font-medium text-white hover:bg-primary-600 transition-colors"
             >
               <svg
                 width="20"
@@ -350,12 +494,13 @@ export function ReservationInvoiceModal({
                   strokeLinejoin="round"
                 />
               </svg>
-              <span className="text-sm font-medium">دانلود فاکتور (PDF)</span>
+              <span>دانلود فاکتور (PDF)</span>
             </button>
           </div>
         </div>
       </DialogContent>
     </Dialog>
+    </>
   );
 }
 

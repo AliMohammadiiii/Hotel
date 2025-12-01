@@ -11,6 +11,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import AccommodationDetail from "./pages/AccommodationDetail";
 import Login from "./pages/Login";
+import AdminLogin from "./pages/AdminLogin";
 import Signup from "./pages/Signup";
 import InjastCallback from "./pages/InjastCallback";
 import Reservations from "./pages/Reservations";
@@ -52,6 +53,7 @@ function App() {
             <Route path="/accommodation/:id" element={<AccommodationDetail />} />
             <Route path="/accommodations/:id" element={<AccommodationDetail />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/auth/injast/callback" element={<InjastCallback />} />
             <Route

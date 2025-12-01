@@ -221,6 +221,16 @@ SIMPLE_JWT = {
     'TOKEN_TYPE_CLAIM': 'token_type',
 }
 
+# Separate configuration for Admin panel JWTs so they are cryptographically
+# distinct from normal application tokens.
+ADMIN_JWT_SECRET = config(
+    'ADMIN_JWT_SECRET',
+    default=SECRET_KEY + '_admin'  # overridden in production via .env
+)
+ADMIN_JWT_LIFETIME = timedelta(
+    minutes=config('ADMIN_JWT_LIFETIME_MINUTES', default=60, cast=int)
+)
+
 # Security settings for production
 if not DEBUG:
     SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)

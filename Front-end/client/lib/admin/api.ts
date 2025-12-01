@@ -1,4 +1,4 @@
-import { authenticatedFetch } from "@/lib/api";
+import { adminAuthenticatedFetch } from "@/lib/api";
 import type {
   Accommodation,
   AccommodationDetail,
@@ -14,7 +14,7 @@ export async function getAdminAccommodations(search?: string): Promise<Accommoda
   if (search) {
     url.searchParams.append('search', search);
   }
-  const response = await authenticatedFetch(url.toString());
+  const response = await adminAuthenticatedFetch(url.toString());
   if (!response.ok) {
     throw new Error(`Failed to fetch accommodations: ${response.statusText}`);
   }
@@ -24,7 +24,7 @@ export async function getAdminAccommodations(search?: string): Promise<Accommoda
 }
 
 export async function getAdminAccommodation(id: number): Promise<AccommodationDetail> {
-  const response = await authenticatedFetch(`${API_BASE_URL}/api/admin/accommodations/${id}/`);
+  const response = await adminAuthenticatedFetch(`${API_BASE_URL}/api/admin/accommodations/${id}/`);
   if (!response.ok) {
     throw new Error(`Failed to fetch accommodation: ${response.statusText}`);
   }
@@ -32,7 +32,7 @@ export async function getAdminAccommodation(id: number): Promise<AccommodationDe
 }
 
 export async function createAccommodation(data: FormData): Promise<AccommodationDetail> {
-  const response = await authenticatedFetch(`${API_BASE_URL}/api/admin/accommodations/`, {
+  const response = await adminAuthenticatedFetch(`${API_BASE_URL}/api/admin/accommodations/`, {
     method: 'POST',
     // Don't set Content-Type header - browser will set it automatically with boundary for FormData
     body: data,
@@ -45,7 +45,7 @@ export async function createAccommodation(data: FormData): Promise<Accommodation
 }
 
 export async function updateAccommodation(id: number, data: FormData): Promise<AccommodationDetail> {
-  const response = await authenticatedFetch(`${API_BASE_URL}/api/admin/accommodations/${id}/`, {
+  const response = await adminAuthenticatedFetch(`${API_BASE_URL}/api/admin/accommodations/${id}/`, {
     method: 'PATCH',
     // Don't set Content-Type header - browser will set it automatically with boundary for FormData
     body: data,
@@ -58,7 +58,7 @@ export async function updateAccommodation(id: number, data: FormData): Promise<A
 }
 
 export async function deleteAccommodation(id: number): Promise<void> {
-  const response = await authenticatedFetch(`${API_BASE_URL}/api/admin/accommodations/${id}/`, {
+  const response = await adminAuthenticatedFetch(`${API_BASE_URL}/api/admin/accommodations/${id}/`, {
     method: 'DELETE',
   });
   if (!response.ok) {
@@ -69,7 +69,7 @@ export async function deleteAccommodation(id: number): Promise<void> {
 export async function addAccommodationImage(accommodationId: number, image: File): Promise<any> {
   const formData = new FormData();
   formData.append('image', image);
-  const response = await authenticatedFetch(
+  const response = await adminAuthenticatedFetch(
     `${API_BASE_URL}/api/admin/accommodations/${accommodationId}/images/`,
     {
       method: 'POST',
@@ -84,7 +84,7 @@ export async function addAccommodationImage(accommodationId: number, image: File
 }
 
 export async function deleteAccommodationImage(accommodationId: number, imageId: number): Promise<void> {
-  const response = await authenticatedFetch(
+  const response = await adminAuthenticatedFetch(
     `${API_BASE_URL}/api/admin/accommodations/${accommodationId}/images/${imageId}/`,
     {
       method: 'DELETE',
@@ -101,7 +101,7 @@ export async function getAdminAmenities(search?: string): Promise<Amenity[]> {
   if (search) {
     url.searchParams.append('search', search);
   }
-  const response = await authenticatedFetch(url.toString());
+  const response = await adminAuthenticatedFetch(url.toString());
   if (!response.ok) {
     throw new Error(`Failed to fetch amenities: ${response.statusText}`);
   }
@@ -111,7 +111,7 @@ export async function getAdminAmenities(search?: string): Promise<Amenity[]> {
 }
 
 export async function getAdminAmenity(id: number): Promise<Amenity> {
-  const response = await authenticatedFetch(`${API_BASE_URL}/api/admin/amenities/${id}/`);
+  const response = await adminAuthenticatedFetch(`${API_BASE_URL}/api/admin/amenities/${id}/`);
   if (!response.ok) {
     throw new Error(`Failed to fetch amenity: ${response.statusText}`);
   }
@@ -119,7 +119,7 @@ export async function getAdminAmenity(id: number): Promise<Amenity> {
 }
 
 export async function createAmenity(data: FormData): Promise<Amenity> {
-  const response = await authenticatedFetch(`${API_BASE_URL}/api/admin/amenities/`, {
+  const response = await adminAuthenticatedFetch(`${API_BASE_URL}/api/admin/amenities/`, {
     method: 'POST',
     // Don't set Content-Type header - browser will set it automatically with boundary for FormData
     body: data,
@@ -132,7 +132,7 @@ export async function createAmenity(data: FormData): Promise<Amenity> {
 }
 
 export async function updateAmenity(id: number, data: FormData): Promise<Amenity> {
-  const response = await authenticatedFetch(`${API_BASE_URL}/api/admin/amenities/${id}/`, {
+  const response = await adminAuthenticatedFetch(`${API_BASE_URL}/api/admin/amenities/${id}/`, {
     method: 'PATCH',
     // Don't set Content-Type header - browser will set it automatically with boundary for FormData
     body: data,
@@ -145,7 +145,7 @@ export async function updateAmenity(id: number, data: FormData): Promise<Amenity
 }
 
 export async function deleteAmenity(id: number): Promise<void> {
-  const response = await authenticatedFetch(`${API_BASE_URL}/api/admin/amenities/${id}/`, {
+  const response = await adminAuthenticatedFetch(`${API_BASE_URL}/api/admin/amenities/${id}/`, {
     method: 'DELETE',
   });
   if (!response.ok) {
@@ -171,7 +171,7 @@ export async function getAdminReservations(filters?: AdminReservationFilters): P
       }
     });
   }
-  const response = await authenticatedFetch(url.toString());
+  const response = await adminAuthenticatedFetch(url.toString());
   if (!response.ok) {
     throw new Error(`Failed to fetch reservations: ${response.statusText}`);
   }
@@ -181,7 +181,7 @@ export async function getAdminReservations(filters?: AdminReservationFilters): P
 }
 
 export async function getAdminReservation(id: number): Promise<Reservation> {
-  const response = await authenticatedFetch(`${API_BASE_URL}/api/admin/reservations/${id}/`);
+  const response = await adminAuthenticatedFetch(`${API_BASE_URL}/api/admin/reservations/${id}/`);
   if (!response.ok) {
     throw new Error(`Failed to fetch reservation: ${response.statusText}`);
   }
@@ -189,7 +189,7 @@ export async function getAdminReservation(id: number): Promise<Reservation> {
 }
 
 export async function updateReservationStatus(id: number, status: string): Promise<Reservation> {
-  const response = await authenticatedFetch(
+  const response = await adminAuthenticatedFetch(
     `${API_BASE_URL}/api/admin/reservations/${id}/update-status/`,
     {
       method: 'PATCH',
@@ -207,7 +207,7 @@ export async function updateReservationStatus(id: number, status: string): Promi
 }
 
 export async function updateReservation(id: number, data: Partial<Reservation>): Promise<Reservation> {
-  const response = await authenticatedFetch(`${API_BASE_URL}/api/admin/reservations/${id}/update/`, {
+  const response = await adminAuthenticatedFetch(`${API_BASE_URL}/api/admin/reservations/${id}/update/`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -250,7 +250,7 @@ export async function getAdminRoomAvailability(filters?: RoomAvailabilityFilters
       }
     });
   }
-  const response = await authenticatedFetch(url.toString());
+  const response = await adminAuthenticatedFetch(url.toString());
   if (!response.ok) {
     throw new Error(`Failed to fetch room availability: ${response.statusText}`);
   }
@@ -265,7 +265,7 @@ export async function createRoomAvailability(data: {
   price?: string | null;
   status: string;
 }): Promise<RoomAvailability> {
-  const response = await authenticatedFetch(`${API_BASE_URL}/api/admin/room-availability/`, {
+  const response = await adminAuthenticatedFetch(`${API_BASE_URL}/api/admin/room-availability/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -283,7 +283,7 @@ export async function updateRoomAvailability(
   id: number,
   data: Partial<RoomAvailability>
 ): Promise<RoomAvailability> {
-  const response = await authenticatedFetch(`${API_BASE_URL}/api/admin/room-availability/${id}/`, {
+  const response = await adminAuthenticatedFetch(`${API_BASE_URL}/api/admin/room-availability/${id}/`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -298,7 +298,7 @@ export async function updateRoomAvailability(
 }
 
 export async function deleteRoomAvailability(id: number): Promise<void> {
-  const response = await authenticatedFetch(`${API_BASE_URL}/api/admin/room-availability/${id}/`, {
+  const response = await adminAuthenticatedFetch(`${API_BASE_URL}/api/admin/room-availability/${id}/`, {
     method: 'DELETE',
   });
   if (!response.ok) {
@@ -317,7 +317,7 @@ export interface BulkCreateAvailabilityRequest {
 export async function bulkCreateRoomAvailability(
   data: BulkCreateAvailabilityRequest
 ): Promise<{ message: string; count: number }> {
-  const response = await authenticatedFetch(`${API_BASE_URL}/api/admin/room-availability/bulk-create/`, {
+  const response = await adminAuthenticatedFetch(`${API_BASE_URL}/api/admin/room-availability/bulk-create/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

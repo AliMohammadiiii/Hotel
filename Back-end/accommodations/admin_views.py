@@ -1,6 +1,6 @@
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.decorators import action, authentication_classes, permission_classes
+from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.exceptions import ValidationError
@@ -11,6 +11,7 @@ import logging
 import traceback
 from datetime import date, timedelta
 from .models import Accommodation, AccommodationImage, Amenity, RoomAvailability
+from accounts.authentication import AdminJWTAuthentication
 from .serializers import (
     AdminAccommodationSerializer,
     AdminAmenitySerializer,
@@ -21,11 +22,12 @@ from .serializers import (
 logger = logging.getLogger(__name__)
 
 
+@authentication_classes([AdminJWTAuthentication])
+@permission_classes([IsAdminUser])
 class AdminAccommodationViewSet(viewsets.ModelViewSet):
     """Admin viewset for Accommodation CRUD operations"""
     queryset = Accommodation.objects.all()
     serializer_class = AdminAccommodationSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     
     def get_queryset(self):
@@ -139,11 +141,12 @@ class AdminAccommodationViewSet(viewsets.ModelViewSet):
             return Response(error_response, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@authentication_classes([AdminJWTAuthentication])
+@permission_classes([IsAdminUser])
 class AdminAmenityViewSet(viewsets.ModelViewSet):
     """Admin viewset for Amenity CRUD operations"""
     queryset = Amenity.objects.all()
     serializer_class = AdminAmenitySerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
     
     def get_queryset(self):
         """Filter amenities by search query if provided"""
@@ -157,11 +160,12 @@ class AdminAmenityViewSet(viewsets.ModelViewSet):
         return queryset.order_by('category', 'name')
 
 
+@authentication_classes([AdminJWTAuthentication])
+@permission_classes([IsAdminUser])
 class AdminRoomAvailabilityViewSet(viewsets.ModelViewSet):
     """Admin viewset for RoomAvailability CRUD operations"""
     queryset = RoomAvailability.objects.all()
     serializer_class = AdminRoomAvailabilitySerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
     
     def get_queryset(self):
         """Filter by accommodation and date range if provided"""

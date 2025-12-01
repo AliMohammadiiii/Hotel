@@ -8,11 +8,11 @@ import BookingCard from "@/components/BookingCard";
 import type { Reservation, ReservationStatus } from "@shared/api";
 
 // Status labels matching the Figma design
-const statusLabels: Record<ReservationStatus | 'all', string> = {
-  all: 'همه',
-  pending: 'در انتظار تایید',
-  confirmed: 'نهایی شده',
-  cancelled: 'لغو شده',
+const statusLabels: Record<ReservationStatus | "all", string> = {
+  all: "همه",
+  pending: "در انتظار تایید",
+  confirmed: "تایید شده",
+  cancelled: "لغو شده",
 };
 
 export default function AccountHistory() {

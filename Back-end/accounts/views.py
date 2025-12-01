@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from .serializers import UserSerializer, SignupSerializer
+from .admin_tokens import create_admin_access_token
 
 
 @api_view(['POST'])
@@ -39,6 +40,50 @@ def login_view(request):
     return Response({
         'access': str(refresh.access_token),
         'refresh': str(refresh),
+        'user': UserSerializer(user).data
+    })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def admin_login_view(request):
+    """
+    Login endpoint for Admin panel that returns a separate Admin JWT.
+
+    This token is completely separate from the normal application JWT and
+    is intended only for admin APIs.
+    """
+    username = request.data.get('username')
+    password = request.data.get('password')
+
+    if not username or not password:
+        return Response(
+            {'error': 'نام کاربری و رمز عبور الزامی است'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    user = authenticate(username=username, password=password)
+
+    if user is None:
+        return Response(
+            {'error': 'نام کاربری یا رمز عبور اشتباه است'},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+
+    if not user.is_active or not user.is_staff:
+        return Response(
+            {'error': 'دسترسی ادمین مجاز نیست'},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+
+    # Issue both normal app tokens and separate admin token
+    refresh = RefreshToken.for_user(user)
+    admin_token = create_admin_access_token(user)
+
+    return Response({
+        'access': str(refresh.access_token),
+        'refresh': str(refresh),
+        'admin_access': admin_token,
         'user': UserSerializer(user).data
     })
 

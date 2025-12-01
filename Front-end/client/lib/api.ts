@@ -1,5 +1,6 @@
 import type { Accommodation, AccommodationDetail, AccommodationListResponse } from '@shared/api';
 import { getAccessToken, refreshToken, clearAuth } from './auth';
+import { getAdminToken, clearAdminAuth } from './adminAuth';
 
 /**
  * API Base URL
@@ -49,6 +50,35 @@ async function authenticatedFetch(
 }
 
 /**
+ * Fetch wrapper for Admin panel that uses the separate Admin JWT.
+ * Sends: Authorization: Admin <token>
+ * Does NOT affect normal user auth tokens.
+ */
+async function adminAuthenticatedFetch(
+  url: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  const token = getAdminToken();
+
+  const headers = new Headers(options.headers);
+  if (token) {
+    headers.set('Authorization', `Admin ${token}`);
+  }
+
+  const response = await fetch(url, {
+    ...options,
+    headers,
+  });
+
+  if (response.status === 401) {
+    // Admin token invalid/expired – clear only admin auth and let caller handle redirect
+    clearAdminAuth();
+  }
+
+  return response;
+}
+
+/**
  * Fetch accommodations list
  */
 export async function getAccommodations(): Promise<Accommodation[]> {
@@ -93,6 +123,6 @@ export async function getUnavailableDates(id: number): Promise<string[]> {
 /**
  * Export authenticated fetch for use in other modules
  */
-export { authenticatedFetch };
+export { authenticatedFetch, adminAuthenticatedFetch };
 
 

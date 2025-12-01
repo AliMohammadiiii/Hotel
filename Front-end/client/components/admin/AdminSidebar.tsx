@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -42,6 +42,7 @@ const menuItems = [
 export function AdminSidebar() {
   const location = useLocation();
   const { logout } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <div className="flex flex-col h-full bg-gray-900 text-white">
@@ -75,7 +76,10 @@ export function AdminSidebar() {
         <Button
           variant="ghost"
           className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
-          onClick={logout}
+          onClick={() => {
+            logout();
+            navigate("/admin/login");
+          }}
         >
           <LogOut className="w-5 h-5 ml-3" />
           <span>خروج</span>

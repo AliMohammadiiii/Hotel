@@ -1,17 +1,19 @@
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.decorators import action, authentication_classes, permission_classes
+from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 from django.db.models import Q
 from datetime import date
 from .models import Reservation
+from accounts.authentication import AdminJWTAuthentication
 from .serializers import ReservationListSerializer, ReservationSerializer
 
 
+@authentication_classes([AdminJWTAuthentication])
+@permission_classes([IsAdminUser])
 class AdminReservationViewSet(viewsets.ReadOnlyModelViewSet):
     """Admin viewset for Reservation management (read-only with status update)"""
     queryset = Reservation.objects.all()
-    permission_classes = [IsAuthenticated, IsAdminUser]
     
     def get_serializer_class(self):
         if self.action == 'list':

@@ -23,6 +23,7 @@
   "dependencies": {
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
+    "html2canvas": "^1.4.1",
     "jalaali-js": "^1.2.8",
     "jspdf": "^2.5.2",
     "moment-jalaali": "^0.9.6",
