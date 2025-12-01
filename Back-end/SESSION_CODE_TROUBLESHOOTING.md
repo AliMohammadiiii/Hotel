@@ -78,3 +78,5 @@ This error means the session code validation failed on Injast's side.
 - Backend IP must be whitelisted for the exchange to work
 
 
+
+

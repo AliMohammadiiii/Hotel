@@ -175,3 +175,5 @@ cd /opt/hotel/Back-end
 sudo systemctl restart hotel-backend
 ```
 
+
+

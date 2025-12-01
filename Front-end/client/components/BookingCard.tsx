@@ -1,6 +1,7 @@
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import type { Reservation, ReservationStatus, Accommodation } from "@shared/api";
 import { formatDateForDisplay, gregorianToPersian } from "@/lib/dateUtils";
+import { ReservationInvoiceModal } from "@/components/ReservationInvoiceModal";
 
 const statusLabels: Record<ReservationStatus, string> = {
   pending: 'در انتظار تایید',
@@ -19,7 +20,7 @@ interface BookingCardProps {
 }
 
 export default function BookingCard({ reservation }: BookingCardProps) {
-  const navigate = useNavigate();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Get accommodation data (could be accommodation_detail or accommodation depending on API)
   const accommodation: Accommodation | undefined = 
@@ -66,11 +67,14 @@ export default function BookingCard({ reservation }: BookingCardProps) {
                 `اقامتگاه #${reservation.accommodation}`;
 
   const handleCardClick = () => {
-    navigate(`/reservations/${reservation.id}/edit`);
+    setIsModalOpen(true);
   };
 
   return (
-    <div className="flex flex-col items-stretch gap-2 p-4 rounded-xl bg-white shadow-sm">
+    <div 
+      className="flex flex-col items-stretch gap-2 p-4 rounded-xl bg-white shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+      onClick={handleCardClick}
+    >
       <div className="flex gap-2.5 items-center">
         {/* Image with Status Badge */}
         <div className="relative rounded-lg w-[120px] h-[120px] flex-shrink-0">
@@ -120,15 +124,18 @@ export default function BookingCard({ reservation }: BookingCardProps) {
         </div>
 
         {/* Navigation Arrow Button */}
-        <button
-          onClick={handleCardClick}
-          className="bg-bg-secondary p-3 rounded-lg w-10 h-10 flex items-center justify-center flex-shrink-0"
-        >
+        <div className="bg-bg-secondary p-3 rounded-lg w-10 h-10 flex items-center justify-center flex-shrink-0">
           <svg width="22" height="22" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M11.25 4.5L6.75 9L11.25 13.5" stroke="#1DBF98" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-        </button>
+        </div>
       </div>
+
+      <ReservationInvoiceModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        reservation={reservation}
+      />
     </div>
   );
 }

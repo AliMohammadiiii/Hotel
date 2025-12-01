@@ -360,3 +360,5 @@ Then test in browser:
 - When behind a reverse proxy, Django needs `USE_X_FORWARDED_HOST = True`
 - If using HTTPS through CDN, ensure `X-Forwarded-Proto` header is set correctly
 
+
+

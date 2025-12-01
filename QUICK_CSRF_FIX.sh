@@ -68,3 +68,5 @@ echo "To verify CSRF settings were loaded:"
 echo "  sudo su - hotel -c \"cd /opt/hotel/Back-end && source ../venv/bin/activate && export \\\$(cat .env | xargs) && python -c 'from django.conf import settings; print(\"CSRF_TRUSTED_ORIGINS:\", settings.CSRF_TRUSTED_ORIGINS)'\""
 echo ""
 
+
+

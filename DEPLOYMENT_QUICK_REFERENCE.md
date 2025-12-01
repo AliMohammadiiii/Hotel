@@ -281,3 +281,5 @@ sudo systemctl restart hotel-backend
 - Logs: `/var/log/hotel`
 - Environment: `/opt/hotel/Back-end/.env`
 
+
+

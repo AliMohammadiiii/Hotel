@@ -65,3 +65,5 @@ You should see:
 
 The Django settings now automatically create the media directory structure when the application starts. However, this doesn't fix existing permission issues - you still need to set correct permissions as shown above.
 
+
+

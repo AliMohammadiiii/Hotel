@@ -44,3 +44,5 @@ echo "If you're using gunicorn/systemd, you may need to:"
 echo "1. Ensure the service user is in the $GROUP group"
 echo "2. Restart the Django service: sudo systemctl restart hotel-backend"
 
+
+
